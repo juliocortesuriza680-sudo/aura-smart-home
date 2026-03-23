@@ -12,18 +12,19 @@ const PORT = 3000;
 
 // 1. Samsung TV Control API
 app.post('/api/tv/command', (req, res) => {
-  const { ip, command, mac } = req.body;
+  const { ip, command, mac = '00:00:00:00:00:00' } = req.body; // Default MAC for testing
   
-  if (command === 'KEY_POWER' && mac) {
-    // Wake on LAN for turning on
+  if (command === 'KEY_POWER') {
+    // Wake on LAN for turning on (using provided or dummy MAC)
     wol.wake(mac, (error: any) => {
       if (error) {
         console.error('Error waking up TV:', error);
-        return res.status(500).json({ error: 'Failed to wake TV' });
+        // We don't return here because we still want to try the WebSocket connection
+        // in case the TV is already on and just in standby.
+      } else {
+        console.log('WOL magic packet sent to', mac);
       }
-      res.json({ status: 'WOL sent' });
     });
-    return;
   }
 
   // WebSocket connection to Samsung TV (Tizen)
