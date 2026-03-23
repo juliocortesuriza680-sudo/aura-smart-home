@@ -1,0 +1,5 @@
+{
+  "name": "Aura Smart Home",
+  "description": "Panel de control elegante para automatización de cámaras de seguridad y entretenimiento en el hogar.",
+  "requestFramePermissions": ["camera"]
+}
