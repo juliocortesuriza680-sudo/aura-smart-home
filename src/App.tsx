@@ -297,11 +297,23 @@ function CamerasView() {
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success'>('idle');
   const [showExplanation, setShowExplanation] = useState(false);
 
-  const handleTestConnection = () => {
+  const handleTestConnection = async () => {
     setTestStatus('testing');
-    setTimeout(() => {
-      setTestStatus('success');
-    }, 2000);
+    try {
+      const response = await fetch('/api/camera/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rtspUrl })
+      });
+      if (response.ok) {
+        setTestStatus('success');
+      } else {
+        setTestStatus('idle');
+      }
+    } catch (error) {
+      console.error('Error testing camera:', error);
+      setTestStatus('idle');
+    }
   };
 
   return (
@@ -476,8 +488,18 @@ function CamerasView() {
 }
 
 function DevicesView({ tvStatus, setTvStatus, addLog }: any) {
-  const handleRemoteClick = (btn: string) => {
-    addLog(`Comando enviado a TV: ${btn}`, 'info');
+  const handleRemoteClick = async (btn: string) => {
+    addLog(`Enviando comando a TV: ${btn}`, 'info');
+    try {
+      await fetch('/api/tv/command', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ip: '192.168.80.90', command: btn })
+      });
+      addLog(`Comando enviado a TV: ${btn}`, 'success');
+    } catch (error) {
+      addLog(`Error enviando comando a TV: ${btn}`, 'alert');
+    }
   };
 
   return (
@@ -490,11 +512,21 @@ function DevicesView({ tvStatus, setTvStatus, addLog }: any) {
             <p className="text-sm text-neutral-400">Conectado vía WebSocket (Puerto 8002)</p>
           </div>
           <button 
-            onClick={() => {
+            onClick={async () => {
               const newStatus = tvStatus === 'off' ? 'turning_on' : 'off';
               setTvStatus(newStatus);
-              addLog(`TV Sala: ${newStatus === 'off' ? 'Apagado (KEY_POWER)' : 'Encendido (WOL / KEY_POWER)'} manualmente.`, 'info');
-              if(newStatus === 'turning_on') setTimeout(() => setTvStatus('netflix'), 1500);
+              addLog(`TV Sala: ${newStatus === 'off' ? 'Apagando (KEY_POWER)' : 'Encendiendo (WOL / KEY_POWER)'}...`, 'info');
+              
+              try {
+                await fetch('/api/tv/command', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ ip: '192.168.80.90', command: 'KEY_POWER' })
+                });
+                if(newStatus === 'turning_on') setTimeout(() => setTvStatus('netflix'), 1500);
+              } catch (error) {
+                addLog('Error al conectar con la TV', 'alert');
+              }
             }}
             className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${tvStatus !== 'off' ? 'bg-indigo-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'bg-white/5 text-neutral-400 hover:bg-white/10'}`}
           >
